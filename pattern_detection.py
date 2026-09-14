@@ -13,8 +13,9 @@ else:
     exit()
 
 # Set up MuseScore paths
-music21.environment.set('musicxmlPath', r'C:/Program Files/MuseScore 4/bin/Musescore4.exe')
-music21.environment.set('musescoreDirectPNGPath', r'C:/Program Files/MuseScore 4/bin/Musescore4.exe')
+if os.name == "nt":
+    music21.environment.set('musicxmlPath', r'C:/Program Files/MuseScore 4/bin/Musescore4.exe')
+    music21.environment.set('musescoreDirectPNGPath', r'C:/Program Files/MuseScore 4/bin/Musescore4.exe')
 
 # Read the input music xml file and get the user's desired number of parts
 file = input("Please enter a filename:\n")
