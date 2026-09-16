@@ -1,4 +1,6 @@
 # Program that reduces a score (.musicxml file) using pattern detection and note ranking.  
+from sys import platform
+import subprocess
 import os
 import music21
 from importlib import util
@@ -13,9 +15,17 @@ else:
     exit()
 
 # Set up MuseScore paths
-if os.name == "nt":
+if platform == 'win32':
+    # Windows
     music21.environment.set('musicxmlPath', r'C:/Program Files/MuseScore 4/bin/Musescore4.exe')
     music21.environment.set('musescoreDirectPNGPath', r'C:/Program Files/MuseScore 4/bin/Musescore4.exe')
+elif platform == 'darwin':
+    # Mac OS - TODO
+    pass
+else:
+    # assume Linux
+    music21.environment.set('musicxmlPath', r'/usr/bin/mscore')
+    music21.environment.set('musescoreDirectPNGPath', r'/usr/bin/mscore')
 
 
 # Read the input music xml file and get the user's desired number of parts
@@ -51,6 +61,15 @@ if song.metadata and song.metadata.title:
 filename = file.split(".")
 title_pdf = filename[0] + ".pdf"
 title_xml = filename[0] + ".xml"
+separated_xml = filename[0] + "_separated.musicxml"
+
+#Create seperated music
+print("\nmusic21_voice_separation start(\n")
+seperation_status = subprocess.run(["python", "./music21_voice_separation-master/voice_separation.py", file, filename[0]], capture_output=True, text=True)
+seperation_status.check_returncode()
+print(seperation_status.stdout)
+print(")music21_voice_separation finished\n")
+
 
 # Remove existing files if they exist
 for output_file in [title_pdf, title_xml, 'dropped_notes.pdf', 'dropped_notes.xml']:
