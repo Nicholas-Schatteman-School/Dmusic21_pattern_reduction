@@ -6,7 +6,7 @@
     <creator type="composer">Gilles Binchois</creator>
     <rights>Copyright © 2010 MakeMusic, Inc.</rights>
     <encoding>
-      <encoding-date>2026-09-15</encoding-date>
+      <encoding-date>2026-10-28</encoding-date>
       <software>music21 v.10.5.0</software>
       <software>Finale v27.0 for Mac</software>
       <supports element="beam" type="yes" />
@@ -24,11 +24,11 @@
     <score-part id="P1">
       <part-name>Cantus</part-name>
       <part-abbreviation>V</part-abbreviation>
-      <score-instrument id="Ia6a018ae6fb4418b59f381728bd8ab77">
+      <score-instrument id="I9b23ce84206c81f42a61cfeaffe53d87">
         <instrument-name>Cantus</instrument-name>
         <instrument-abbreviation>V</instrument-abbreviation>
       </score-instrument>
-      <midi-instrument id="Ia6a018ae6fb4418b59f381728bd8ab77">
+      <midi-instrument id="I9b23ce84206c81f42a61cfeaffe53d87">
         <midi-channel>1</midi-channel>
         <midi-program>54</midi-program>
       </midi-instrument>
