@@ -178,10 +178,15 @@ def reduce_score(score_obj, max_voices, repeated_patterns):
     return reduced_stream
 
 
-def reduce_seperated_score(score_obj, prioritized_score, remainder_score, max_voices):
+def check_prioritized(note):
+    for i in notes.groups:
+        if i == 'prioritized':
+            return 0
+    return 1
+
+
+def reduce_seperated_score(score_obj, marked_score, max_voices):
     reduced_stream = music21.stream.Part()
-    p_reduced_stream = music21.stream.Part()
-    r_reduced_stream = music21.stream.Part()
 
     # Preserve the time signature and tempo
     time_signature = score_obj.flatten().getElementsByClass(music21.meter.TimeSignature)
@@ -191,69 +196,37 @@ def reduce_seperated_score(score_obj, prioritized_score, remainder_score, max_vo
     if time_signature:
         reduced_stream.append(time_signature[0])  
     if tempo_mark:
-        reduced_stream.append(tempo_mark[0])
+        reduced_stream.append(tempo_mark[0])  
 
-
-    score_notes = score_obj.flatten().notesAndRests
-
-    priority_notes = prioritized_score.flatten().notesAndRests
-    remainder_notes = remainder_score.flatten().notesAndRests
-
-    if len(priority_notes) > len(remainder_notes):
-        length = len(priority_notes)
-    else:
-        length = len(remainder_notes)
-
-
-    for i in range(length):
-        p_notes = []
-        r_notes = []
-
-        if isinstance(priority_notes[i], music21.chord.Chord):
-            p_notes.extend(priority_notes[i].notes)
-        else: 
-            if isinstance(priority_notes[i], music21.note.Note):
-                p_notes.append(priority_notes[i])
-
-        if (len(p_notes) < max_voices and len(remainder_notes) > i):
-            if isinstance(remainder_notes[i], music21.chord.Chord):
-                r_notes.extend(remainder_notes[i].notes[:max_voices - len(p_notes)])
-            else: 
-                if isinstance(remainder_notes[i], music21.note.Note):
-                    r_notes.append(remainder_notes[i])
-        
-        
-        p_reduced_chord = music21.chord.Chord(p_notes[:max_voices])
-        r_reduced_chord = music21.chord.Chord(r_notes)
-        
-        
-        if p_reduced_chord.notes:
-            p_reduced_stream.append(p_reduced_chord)
-        else:
-            # If no notes are left in the chord, append rests to meet the limit
-            for _ in range(max_voices - len(p_reduced_chord.notes)):
-                p_reduced_stream.append(music21.note.Rest(quarterLength=priority_notes[i].quarterLength))
-        
-
-        if r_reduced_chord.notes:
-            r_reduced_stream.append(r_reduced_chord)
-        else:
-            # If no notes are left in the chord, append rests to meet the limit
-            for _ in range(max_voices - len(r_reduced_chord.notes)):
-                r_reduced_stream.append(music21.note.Rest(quarterLength=priority_notes[i].quarterLength))
-
+    score_notes = marked_score.flatten().notesAndRests
     
-        
+    # Loop through the original score
+    for i in range(len(score_notes)):
+        if isinstance(score_notes[i], music21.chord.Chord):
+            chord_notes = score_notes[i].notes
+            for j in range(len(chord_notes)):
+                lowest = j
+                for k in range(j, len(chord_notes)):
+                    if (check_prioritized(chord_notes[j]) > check_prioritized(chord_notes[k])):
+                        temp = chord_notes[j]
+                        chord_notes[j] = chord_notes[k]
+                        chord_notes[k] = temp
 
-    #p_reduced_stream.show()
-    #r_reduced_stream.show()
+            
+            reduced_chord = music21.chord.Chord(chord_notes[0:max_voices])
 
-    reduced_stream.insert(0, p_reduced_stream)
-    reduced_stream.insert(0, r_reduced_stream)
 
-    ret = reduced_stream.flatten().chordify()
+            # Only append if the reduced chord has notes (no artificial additions)
+            if reduced_chord.notes:
+                reduced_stream.append(reduced_chord)
+            else:
+                # If no notes are left in the chord, append rests to meet the limit
+                for _ in range(max_voices - len(reduced_chord.notes)):
+                    reduced_stream.append(music21.note.Rest(quarterLength=score_notes[i].quarterLength))
+        else:
+            reduced_stream.append(score_notes[i])  # Append rests or other elements
 
-    return ret
+    return reduced_stream
 
 
     
@@ -364,8 +337,8 @@ for p in seperated_song.parts:
     repeated_patterns.extend(find_repeated_patterns(p))
 
 
-prioritized_score = music21.stream.Score(id='prioritized_score')
-remainder_score = music21.stream.Score(id='remainder_score')
+prioritized_score = music21.stream.Part(id='prioritized_score')
+remainder_score = music21.stream.Part(id='remainder_score')
 
 time_signature = song.flatten().getElementsByClass(music21.meter.TimeSignature)
 tempo_mark = song.flatten().getElementsByClass(music21.tempo.MetronomeMark)
@@ -387,6 +360,23 @@ for p in seperated_song.parts:
 # remainder_score.show()
 chordied_prioritized_score = prioritized_score.chordify()
 chordied_remainder_score = remainder_score.chordify()
+
+chordied_prioritized_score.id = 'prioritized'
+chordied_remainder_score.id = 'remainder'
+
+for notes in chordied_prioritized_score.flatten().notes:
+    for note in notes:
+        note.groups.append('prioritized')
+for notes in chordied_remainder_score.flatten().notes:
+    for note in notes:
+        note.groups.append('remainder')
+
+grouped_score = music21.stream.Score(id='grouped_score')
+grouped_score.insert(0, chordied_prioritized_score)
+grouped_score.insert(0, chordied_remainder_score)
+chordied_grouped_score = grouped_score.chordify()
+
+# chordied_grouped_score.show()
 # chordied_prioritized_score.flatten().show()
 # chordied_remainder_score.flatten().show()
 
@@ -448,7 +438,7 @@ if limit <= 1:
 
 else:
     #reduced_score = reduce_score(song, limit, repeated_patterns)
-    reduced_score = reduce_seperated_score(song, chordied_prioritized_score, chordied_remainder_score, limit)
+    reduced_score = reduce_seperated_score(song, chordied_grouped_score, limit)
     new_score = music21.stream.Score(id='main_score')
     new_score.append(reduced_score)  # Append the reduced score directly
 
